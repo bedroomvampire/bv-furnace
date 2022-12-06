@@ -2,16 +2,8 @@
 
 demo songs for Furnace.
 
-these demo songs are not under the GPL. all rights are reserved to the original author(s).
+these demo songs are not under the GPL. in the case of covers, all rights are reserved to the original author.
 
 # submit demo songs!
 
-contact me or send a pull request if you want your song to be added to this collection. be noted we have three rules:
-
-- Nintendo covers are frowned upon
-- big label music covers also are discouraged
-- low effort compositions/covers may not be accepted at all.
-
-tildearrow also accepts demo songs in the .dmf format as well as the .fur format.
-
-thank you for contributing!
+just send a pull request if you want your song to be added to this collection. thank you!

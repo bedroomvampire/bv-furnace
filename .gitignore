@@ -1,7 +1,5 @@
 .vscode/
 build/
-clangbuild/
-nosdl/
 release/
 t/
 winbuild/
@@ -14,11 +12,3 @@ linuxbuild/
 test/songs/
 test/delta/
 test/result/
-test/assert_delta
-android/.gradle/
-android/app/build/
-android/app/.cxx/
-.vs/
-CMakeSettings.json
-CMakePresets.json
-extern/imgui_patched/examples/

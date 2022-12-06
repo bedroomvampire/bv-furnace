@@ -44,7 +44,10 @@ SOFTWARE.
 #if defined (__EMSCRIPTEN__) // EMSCRIPTEN
 	#include <emscripten.h>
 #endif // EMSCRIPTEN
-#ifdef WIN32
+#if defined(__WIN32__) || defined(_WIN32)
+	#ifndef WIN32
+		#define WIN32
+	#endif // WIN32
 	#define stat _stat
 	#define stricmp _stricmp
 	#include <cctype>
@@ -58,13 +61,13 @@ SOFTWARE.
 	#ifndef PATH_MAX
 		#define PATH_MAX 260
 	#endif // PATH_MAX
-#elif defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__) || defined (__EMSCRIPTEN__) || defined(__HAIKU__)
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__) || defined (__EMSCRIPTEN__)
 	#define UNIX
 	#define stricmp strcasecmp
 	#include <sys/types.h>
 	// this option need c++17
 	#ifndef USE_STD_FILESYSTEM
-		#include <dirent.h>
+		#include <dirent.h> 
 	#endif // USE_STD_FILESYSTEM
 	#define PATH_SEP '/'
 #endif // defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
@@ -74,13 +77,10 @@ SOFTWARE.
 	#define IMGUI_DEFINE_MATH_OPERATORS
 #endif // IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
-#include <IconsFontAwesome4.h>
 
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
-
-#define DOUBLE_CLICKED ((singleClickSel && ImGui::IsMouseReleased(0)) || (!singleClickSel && ImGui::IsMouseDoubleClicked(0)))
 
 #ifdef USE_THUMBNAILS
 #ifndef DONT_DEFINE_AGAIN__STB_IMAGE_IMPLEMENTATION
@@ -120,7 +120,7 @@ namespace IGFD
 #endif // IMGUI_BUTTON
 // locales
 #ifndef createDirButtonString
-#define createDirButtonString ICON_FA_PLUS
+#define createDirButtonString "+"
 #endif // createDirButtonString
 #ifndef okButtonString
 #define okButtonString "OK"
@@ -129,13 +129,13 @@ namespace IGFD
 #define cancelButtonString "Cancel"
 #endif // cancelButtonString
 #ifndef resetButtonString
-#define resetButtonString ICON_FA_REPEAT
+#define resetButtonString "R"
 #endif // resetButtonString
 #ifndef drivesButtonString
 #define drivesButtonString "Drives"
 #endif // drivesButtonString
 #ifndef editPathButtonString
-#define editPathButtonString ICON_FA_PENCIL
+#define editPathButtonString "E"
 #endif // editPathButtonString
 #ifndef searchString
 #define searchString "Search"
@@ -150,10 +150,10 @@ namespace IGFD
 #define fileEntryString "[File]"
 #endif // fileEntryString
 #ifndef fileNameString
-#define fileNameString "Name:"
+#define fileNameString "File Name:"
 #endif // fileNameString
 #ifndef dirNameString
-#define dirNameString "Path:"
+#define dirNameString "Directory Path:"
 #endif // dirNameString
 #ifndef buttonResetSearchString
 #define buttonResetSearchString "Reset search"
@@ -1105,7 +1105,7 @@ namespace IGFD
 
 			bool needToApllyNewFilter = false;
 
-			ImGui::PushItemWidth(FILTER_COMBO_WIDTH*FileDialog::Instance()->DpiScale);
+			ImGui::PushItemWidth(FILTER_COMBO_WIDTH);
 			if (ImGui::BeginCombo("##Filters", prSelectedFilter.filter.c_str(), ImGuiComboFlags_None))
 			{
 				intptr_t i = 0;
@@ -1223,8 +1223,6 @@ namespace IGFD
 				std::sort(prFileList.begin(), prFileList.end(),
 					[](const std::shared_ptr<FileInfos>& a, const std::shared_ptr<FileInfos>& b) -> bool
 					{
-            if (a==NULL || b==NULL)
-              return false;
 						if (!a.use_count() || !b.use_count())
 							return false;
 
@@ -1254,8 +1252,6 @@ namespace IGFD
 				std::sort(prFileList.begin(), prFileList.end(),
 					[](const std::shared_ptr<FileInfos>& a, const std::shared_ptr<FileInfos>& b) -> bool
 					{
-            if (a==NULL || b==NULL)
-              return false;
 						if (!a.use_count() || !b.use_count())
 							return false;
 
@@ -1305,8 +1301,6 @@ namespace IGFD
 				std::sort(prFileList.begin(), prFileList.end(),
 					[](const std::shared_ptr<FileInfos>& a, const std::shared_ptr<FileInfos>& b) -> bool
 					{
-            if (a==NULL || b==NULL)
-              return false;
 						if (!a.use_count() || !b.use_count())
 							return false;
 
@@ -1328,8 +1322,6 @@ namespace IGFD
 				std::sort(prFileList.begin(), prFileList.end(),
 					[](const std::shared_ptr<FileInfos>& a, const std::shared_ptr<FileInfos>& b) -> bool
 					{
-            if (a==NULL || b==NULL)
-              return false;
 						if (!a.use_count() || !b.use_count())
 							return false;
 
@@ -1345,8 +1337,6 @@ namespace IGFD
 				std::sort(prFileList.begin(), prFileList.end(),
 					[](const std::shared_ptr<FileInfos>& a, const std::shared_ptr<FileInfos>& b) -> bool
 					{
-            if (a==NULL || b==NULL)
-              return false;
 						if (!a.use_count() || !b.use_count())
 							return false;
 
@@ -1368,8 +1358,6 @@ namespace IGFD
 				std::sort(prFileList.begin(), prFileList.end(),
 					[](const std::shared_ptr<FileInfos>& a, const std::shared_ptr<FileInfos>& b) -> bool
 					{
-            if (a==NULL || b==NULL)
-              return false;
 						if (!a.use_count() || !b.use_count())
 							return false;
 
@@ -1385,8 +1373,6 @@ namespace IGFD
 				std::sort(prFileList.begin(), prFileList.end(),
 					[](const std::shared_ptr<FileInfos>& a, const std::shared_ptr<FileInfos>& b) -> bool
 					{
-            if (a==NULL || b==NULL)
-              return false;
 						if (!a.use_count() || !b.use_count())
 							return false;
 
@@ -1550,53 +1536,28 @@ namespace IGFD
 				for (i = 0; i < n; i++)
 				{
 					struct dirent* ent = files[i];
-					std::string where = path + std::string("/") + std::string(ent->d_name);
+
 					char fileType = 0;
-#ifdef HAVE_DIRENT_TYPE
-					if (ent->d_type != DT_UNKNOWN)
+					switch (ent->d_type)
 					{
-						switch (ent->d_type)
-						{
-						case DT_REG:
-							fileType = 'f'; break;
-						case DT_DIR:
-							fileType = 'd'; break;
-						case DT_LNK:
-							DIR* dirTest = opendir(where.c_str());
-							if (dirTest == NULL)
-							{
-								if (errno == ENOTDIR)
-								{
-									fileType = 'f';
-								}
-								else
-								{
-									fileType = 'l';
-								}
-							}
-							else
-							{
-								fileType = 'd';
-								closedir(dirTest);
-							}
-							break;
-						}
-					}
-					else
-#endif // HAVE_DIRENT_TYPE
-					{
-						struct stat filestat;
-						if (stat(where.c_str(), &filestat) == 0)
-						{
-							if (S_ISDIR(filestat.st_mode))
-							{
-								fileType = 'd';
-							}
-							else
-							{
-								fileType = 'f';
-							}
-						}
+					case DT_REG:
+						fileType = 'f'; break;
+					case DT_DIR:
+						fileType = 'd'; break;
+					case DT_LNK:
+            std::string where = path+std::string("/")+std::string(ent->d_name);
+            DIR* dirTest = opendir(where.c_str());
+            if (dirTest==NULL) {
+              if (errno==ENOTDIR) {
+                fileType = 'f';
+              } else {
+                fileType = 'l';
+              }
+            } else {
+              fileType = 'd';
+              closedir(dirTest);
+            }
+            break;
 					}
 
 					auto fileNameExt = ent->d_name;
@@ -1786,7 +1747,7 @@ namespace IGFD
 			struct stat statInfos = {};
 			char timebuf[100];
 			int result = stat(fpn.c_str(), &statInfos);
-			if (result!=-1)
+			if (!result)
 			{
 				if (vInfos->fileType != 'd')
 				{
@@ -1807,11 +1768,7 @@ namespace IGFD
 				{
 					vInfos->fileModifDate = std::string(timebuf, len);
 				}
-			} else {
-        vInfos->fileSize=0;
-        vInfos->formatedFileSize = prFormatFileSize(vInfos->fileSize);
-        vInfos->fileModifDate="???";
-      }
+			}
 		}
 	}
 
@@ -3322,7 +3279,7 @@ namespace IGFD
 	//// FILE DIALOG CONSTRUCTOR / DESTRUCTOR ///////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////////////
 
-	IGFD::FileDialog::FileDialog() : BookMarkFeature(), KeyExplorerFeature(), ThumbnailFeature() {DpiScale=1.0f; singleClickSel=false; mobileMode=false;}
+	IGFD::FileDialog::FileDialog() : BookMarkFeature(), KeyExplorerFeature(), ThumbnailFeature() {}
 	IGFD::FileDialog::~FileDialog() = default;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3338,8 +3295,7 @@ namespace IGFD
 		const std::string& vFileName,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3350,7 +3306,6 @@ namespace IGFD
 		prFileDialogInternal.puDLGtitle = vTitle;
 		prFileDialogInternal.puDLGuserDatas = vUserDatas;
 		prFileDialogInternal.puDLGflags = vFlags;
-    prFileDialogInternal.puDLGselFun = vSelectFun;
 		prFileDialogInternal.puDLGoptionsPane = nullptr;
 		prFileDialogInternal.puDLGoptionsPaneWidth = 0.0f;
 		prFileDialogInternal.puDLGmodal = false;
@@ -3380,8 +3335,7 @@ namespace IGFD
 		const std::string& vFilePathName,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3394,7 +3348,6 @@ namespace IGFD
 		prFileDialogInternal.puDLGoptionsPaneWidth = 0.0f;
 		prFileDialogInternal.puDLGuserDatas = vUserDatas;
 		prFileDialogInternal.puDLGflags = vFlags;
-    prFileDialogInternal.puDLGselFun = vSelectFun;
 		prFileDialogInternal.puDLGmodal = false;
 
 		auto ps = IGFD::Utils::ParsePathFileName(vFilePathName);
@@ -3437,8 +3390,7 @@ namespace IGFD
 		const float& vSidePaneWidth,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3449,7 +3401,6 @@ namespace IGFD
 		prFileDialogInternal.puDLGtitle = vTitle;
 		prFileDialogInternal.puDLGuserDatas = vUserDatas;
 		prFileDialogInternal.puDLGflags = vFlags;
-    prFileDialogInternal.puDLGselFun = vSelectFun;
 		prFileDialogInternal.puDLGoptionsPane = vSidePane;
 		prFileDialogInternal.puDLGoptionsPaneWidth = vSidePaneWidth;
 		prFileDialogInternal.puDLGmodal = false;
@@ -3484,8 +3435,7 @@ namespace IGFD
 		const float& vSidePaneWidth,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3498,7 +3448,6 @@ namespace IGFD
 		prFileDialogInternal.puDLGoptionsPaneWidth = vSidePaneWidth;
 		prFileDialogInternal.puDLGuserDatas = vUserDatas;
 		prFileDialogInternal.puDLGflags = vFlags;
-    prFileDialogInternal.puDLGselFun = vSelectFun;
 		prFileDialogInternal.puDLGmodal = false;
 
 		auto ps = IGFD::Utils::ParsePathFileName(vFilePathName);
@@ -3540,8 +3489,7 @@ namespace IGFD
 		const std::string& vFileName,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3549,7 +3497,7 @@ namespace IGFD
 		OpenDialog(
 			vKey, vTitle, vFilters,
 			vPath, vFileName,
-			vCountSelectionMax, vUserDatas, vFlags, vSelectFun);
+			vCountSelectionMax, vUserDatas, vFlags);
 
 		prFileDialogInternal.puDLGmodal = true;
 	}
@@ -3561,8 +3509,7 @@ namespace IGFD
 		const std::string& vFilePathName,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3570,7 +3517,7 @@ namespace IGFD
 		OpenDialog(
 			vKey, vTitle, vFilters,
 			vFilePathName,
-			vCountSelectionMax, vUserDatas, vFlags, vSelectFun);
+			vCountSelectionMax, vUserDatas, vFlags);
 
 		prFileDialogInternal.puDLGmodal = true;
 	}
@@ -3587,8 +3534,7 @@ namespace IGFD
 		const float& vSidePaneWidth,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3597,7 +3543,7 @@ namespace IGFD
 			vKey, vTitle, vFilters,
 			vPath, vFileName,
 			vSidePane, vSidePaneWidth,
-			vCountSelectionMax, vUserDatas, vFlags, vSelectFun);
+			vCountSelectionMax, vUserDatas, vFlags);
 
 		prFileDialogInternal.puDLGmodal = true;
 	}
@@ -3613,8 +3559,7 @@ namespace IGFD
 		const float& vSidePaneWidth,
 		const int& vCountSelectionMax,
 		UserDatas vUserDatas,
-		ImGuiFileDialogFlags vFlags,
-    SelectFun vSelectFun)
+		ImGuiFileDialogFlags vFlags)
 	{
 		if (prFileDialogInternal.puShowDialog) // if already opened, quit
 			return;
@@ -3623,7 +3568,7 @@ namespace IGFD
 			vKey, vTitle, vFilters,
 			vFilePathName,
 			vSidePane, vSidePaneWidth,
-			vCountSelectionMax, vUserDatas, vFlags, vSelectFun);
+			vCountSelectionMax, vUserDatas, vFlags);
 
 		prFileDialogInternal.puDLGmodal = true;
 	}
@@ -3882,9 +3827,8 @@ namespace IGFD
 
 		// Input file fields
 		float width = ImGui::GetContentRegionAvail().x;
-    // fix this! fix this! fix this!
 		if (!fdFile.puDLGDirectoryMode)
-			width -= FILTER_COMBO_WIDTH*DpiScale;
+			width -= FILTER_COMBO_WIDTH;
 		ImGui::PushItemWidth(width);
 		ImGui::InputText("##FileName", fdFile.puFileNameBuffer, MAX_FILE_DIALOG_NAME_BUFFER);
 		if (ImGui::GetItemID() == ImGui::GetActiveID())
@@ -3932,14 +3876,12 @@ namespace IGFD
 		static ImGuiSelectableFlags selectableFlags = ImGuiSelectableFlags_AllowDoubleClick |
 			ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_SpanAvailWidth;
 
-                // TODO BUG?!
-                // YES BUG: THIS JUST CRASHED FOR SOME REASON
 		va_list args;
 		va_start(args, vFmt);
 		vsnprintf(fdi.puVariadicBuffer, MAX_FILE_DIALOG_NAME_BUFFER, vFmt, args);
 		va_end(args);
 
-		float h = /*mobileMode?(ImGui::GetFontSize()+10.0f*DpiScale):*/0.0f;
+		float h = 0.0f;
 #ifdef USE_THUMBNAILS
 		if (prDisplayMode == DisplayModeEnum::THUMBNAILS_LIST)
 			h = DisplayMode_ThumbailsList_ImageHeight;
@@ -3975,7 +3917,7 @@ namespace IGFD
 				}
 				else // no nav system => classic behavior
 				{
-					if (DOUBLE_CLICKED) // 0 -> left mouse button double click
+					if (ImGui::IsMouseDoubleClicked(0)) // 0 -> left mouse button double click
 					{
             isSelectingDir=true;
 						fdi.puPathClicked = fdi.SelectDirectory(vInfos);
@@ -3990,21 +3932,12 @@ namespace IGFD
 			}
 			else
 			{
-        if (DOUBLE_CLICKED) {
+        if (ImGui::IsMouseDoubleClicked(0)) {
           fdi.SelectFileName(prFileDialogInternal, vInfos);
           prFileDialogInternal.puIsOk = true;
           return 2;
         } else {
 				  fdi.SelectFileName(prFileDialogInternal, vInfos);
-          if (prFileDialogInternal.puDLGselFun!=NULL) {
-            std::string argPath;
-            for (auto& i: GetSelection()) {
-              argPath=i.second;
-            }
-            if (!argPath.empty()) {
-              prFileDialogInternal.puDLGselFun(argPath.c_str());
-            }
-          }
         }
 			}
 		}
@@ -4140,9 +4073,7 @@ namespace IGFD
 
 						if (ImGui::TableNextColumn()) // file name
 						{
-             // TODO BUG?!?!?!
-             // YES BUG
-							needToBreakTheloop = prSelectableItem(i, infos, selected, "%s", _str.c_str());
+							needToBreakTheloop = prSelectableItem(i, infos, selected, _str.c_str());
               if (needToBreakTheloop==2) escape=true;
 						}
 						if (ImGui::TableNextColumn()) // file type

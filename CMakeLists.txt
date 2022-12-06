@@ -11,43 +11,23 @@ if (APPLE)
 endif()
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_PROJECT_VERSION_MAJOR 0)
-set(CMAKE_PROJECT_VERSION_MINOR 6)
-set(CMAKE_PROJECT_VERSION_PATCH 0)
-
-set(BUILD_GUI_DEFAULT ON)
-set(USE_SDL2_DEFAULT ON)
-set(USE_SNDFILE_DEFAULT ON)
-set(SYSTEM_SDL2_DEFAULT OFF)
-
-include(CheckIncludeFile)
-include(TestBigEndian)
+set(CMAKE_PROJECT_VERSION_MINOR 5)
+set(CMAKE_PROJECT_VERSION_PATCH 8)
 
 if (ANDROID)
+  set(BUILD_GUI_DEFAULT OFF)
   set(USE_RTMIDI_DEFAULT OFF)
-  set(USE_BACKWARD_DEFAULT OFF)
-  find_library(TERMUX rt)
-  if (TERMUX)
-    message(STATUS "Termux detected")
-  endif()
+  set(SYSTEM_SDL2_DEFAULT ON)
 else()
+  set(BUILD_GUI_DEFAULT ON)
   set(USE_RTMIDI_DEFAULT ON)
-  if (WIN32 OR APPLE)
-    set(USE_BACKWARD_DEFAULT ON)
-  else()
-    CHECK_INCLUDE_FILE(execinfo.h EXECINFO_FOUND)
-    if (EXECINFO_FOUND)
-      set(USE_BACKWARD_DEFAULT ON)
-    else()
-      set(USE_BACKWARD_DEFAULT OFF)
-    endif()
-  endif()
+  set(SYSTEM_SDL2_DEFAULT OFF)
 endif()
 
 find_package(PkgConfig)
-if (PKG_CONFIG_FOUND AND NOT ANDROID)
+if (PKG_CONFIG_FOUND)
   pkg_check_modules(JACK jack)
   set(WITH_JACK_DEFAULT ${JACK_FOUND})
 else()
@@ -55,35 +35,17 @@ else()
 endif()
 
 option(BUILD_GUI "Build the tracker (disable to build only a headless player)" ${BUILD_GUI_DEFAULT})
-option(USE_RTMIDI "Build with MIDI support using RtMidi." ${USE_RTMIDI_DEFAULT})
-option(USE_SDL2 "Build with SDL2. Required to build with GUI." ${USE_SDL2_DEFAULT})
-option(USE_SNDFILE "Build with libsndfile. Required in order to work with audio files." ${USE_SNDFILE_DEFAULT})
-option(USE_BACKWARD "Use backward-cpp to print a backtrace on crash/abort." ${USE_BACKWARD_DEFAULT})
+option(USE_RTMIDI "Build with MIDI support using RtMidi. Currently unfinished." ${USE_RTMIDI_DEFAULT})
 option(WITH_JACK "Whether to build with JACK support. Auto-detects if JACK is available" ${WITH_JACK_DEFAULT})
-option(SYSTEM_FFTW "Use a system-installed version of FFTW instead of the vendored one" OFF)
 option(SYSTEM_FMT "Use a system-installed version of fmt instead of the vendored one" OFF)
 option(SYSTEM_LIBSNDFILE "Use a system-installed version of libsndfile instead of the vendored one" OFF)
 option(SYSTEM_RTMIDI "Use a system-installed version of RtMidi instead of the vendored one" OFF)
 option(SYSTEM_ZLIB "Use a system-installed version of zlib instead of the vendored one" OFF)
 option(SYSTEM_SDL2 "Use a system-installed version of SDL2 instead of the vendored one" ${SYSTEM_SDL2_DEFAULT})
 option(WARNINGS_ARE_ERRORS "Whether warnings in furnace's C++ code should be treated as errors" OFF)
-option(WITH_DEMOS "Install demo songs" ON)
-option(WITH_INSTRUMENTS "Install instruments" ON)
 
 set(DEPENDENCIES_INCLUDE_DIRS "")
-
-if (ANDROID AND NOT TERMUX)
-  set(DEPENDENCIES_DEFINES "IS_MOBILE")
-else()
-  set(DEPENDENCIES_DEFINES "")
-endif()
-
-TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
-
-if (IS_BIG_ENDIAN)
-  list(APPEND DEPENDENCIES_DEFINES "TA_BIG_ENDIAN")
-endif()
-
+set(DEPENDENCIES_DEFINES "")
 set(DEPENDENCIES_COMPILE_OPTIONS "")
 set(DEPENDENCIES_LIBRARIES "")
 set(DEPENDENCIES_LIBRARY_DIRS "")
@@ -97,35 +59,13 @@ else()
 endif()
 
 list(APPEND DEPENDENCIES_INCLUDE_DIRS "extern/SAASound/include")
-list(APPEND DEPENDENCIES_INCLUDE_DIRS "extern/vgsound_emu-modified")
 
 find_package(Threads REQUIRED)
 list(APPEND DEPENDENCIES_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 
-if (SYSTEM_FFTW)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(FFTW REQUIRED fftw3>=3.3)
-  list(APPEND DEPENDENCIES_INCLUDE_DIRS ${FFTW_INCLUDE_DIRS})
-  list(APPEND DEPENDENCIES_COMPILE_OPTIONS ${FFTW_CFLAGS_OTHER})
-  list(APPEND DEPENDENCIES_LIBRARIES ${FFTW_LIBRARIES})
-  list(APPEND DEPENDENCIES_LIBRARY_DIRS ${FFTW_LIBRARY_DIRS})
-  list(APPEND DEPENDENCIES_LINK_OPTIONS ${FFTW_LDFLAGS_OTHER})
-  list(APPEND DEPENDENCIES_LEGACY_LDFLAGS ${FFTW_LDFLAGS})
-  message(STATUS "Using system-installed FFTW")
-else()
-  if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(WITH_OUR_MALLOC ON CACHE BOOL "aaa" FORCE)
-  endif()
-  set(BUILD_TESTS OFF CACHE BOOL "come on" FORCE)
-  add_subdirectory(extern/fftw EXCLUDE_FROM_ALL)
-  list(APPEND DEPENDENCIES_INCLUDE_DIRS extern/fftw/api)
-  list(APPEND DEPENDENCIES_LIBRARIES fftw3)
-  message(STATUS "Using vendored FFTW")
-endif()
-
 if (SYSTEM_FMT)
   if (PKG_CONFIG_FOUND)
-    pkg_check_modules(FMT fmt>=7.1.0)
+    pkg_check_modules(FMT fmt)
     if (FMT_FOUND)
       list(APPEND DEPENDENCIES_INCLUDE_DIRS ${FMT_INCLUDE_DIRS})
       list(APPEND DEPENDENCIES_COMPILE_OPTIONS ${FMT_CFLAGS_OTHER})
@@ -147,30 +87,25 @@ else()
   message(STATUS "Using vendored fmt")
 endif()
 
-if (USE_SNDFILE)
-  list(APPEND DEPENDENCIES_DEFINES HAVE_SNDFILE)
-  if (SYSTEM_LIBSNDFILE)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LIBSNDFILE REQUIRED sndfile)
-    list(APPEND DEPENDENCIES_INCLUDE_DIRS ${LIBSNDFILE_INCLUDE_DIRS})
-    list(APPEND DEPENDENCIES_COMPILE_OPTIONS ${LIBSNDFILE_CFLAGS_OTHER})
-    list(APPEND DEPENDENCIES_LIBRARIES ${LIBSNDFILE_LIBRARIES})
-    list(APPEND DEPENDENCIES_LIBRARY_DIRS ${LIBSNDFILE_LIBRARY_DIRS})
-    list(APPEND DEPENDENCIES_LINK_OPTIONS ${LIBSNDFILE_LDFLAGS_OTHER})
-    list(APPEND DEPENDENCIES_LEGACY_LDFLAGS ${LIBSNDFILE_LDFLAGS})
-    message(STATUS "Using system-installed libsndfile")
-  else()
-    set(BUILD_TESTING OFF CACHE BOOL "aaaaaa" FORCE)
-    set(BUILD_PROGRAMS OFF CACHE BOOL "aaa" FORCE)
-    set(BUILD_EXAMPLES OFF CACHE BOOL "a" FORCE)
-    set(ENABLE_EXTERNAL_LIBS OFF CACHE BOOL "come on" FORCE)
-    set(ENABLE_MPEG OFF CACHE BOOL "come on" FORCE)
-    add_subdirectory(extern/libsndfile EXCLUDE_FROM_ALL)
-    list(APPEND DEPENDENCIES_LIBRARIES sndfile)
-    message(STATUS "Using vendored libsndfile")
-  endif()
+if (SYSTEM_LIBSNDFILE)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(LIBSNDFILE REQUIRED sndfile)
+  list(APPEND DEPENDENCIES_INCLUDE_DIRS ${LIBSNDFILE_INCLUDE_DIRS})
+  list(APPEND DEPENDENCIES_COMPILE_OPTIONS ${LIBSNDFILE_CFLAGS_OTHER})
+  list(APPEND DEPENDENCIES_LIBRARIES ${LIBSNDFILE_LIBRARIES})
+  list(APPEND DEPENDENCIES_LIBRARY_DIRS ${LIBSNDFILE_LIBRARY_DIRS})
+  list(APPEND DEPENDENCIES_LINK_OPTIONS ${LIBSNDFILE_LDFLAGS_OTHER})
+  list(APPEND DEPENDENCIES_LEGACY_LDFLAGS ${LIBSNDFILE_LDFLAGS})
+  message(STATUS "Using system-installed libsndfile")
 else()
-  message(STATUS "Not using libsndfile")
+  set(BUILD_TESTING OFF CACHE BOOL "aaaaaa" FORCE)
+  set(BUILD_PROGRAMS OFF CACHE BOOL "aaa" FORCE)
+  set(BUILD_EXAMPLES OFF CACHE BOOL "a" FORCE)
+  set(ENABLE_EXTERNAL_LIBS OFF CACHE BOOL "come on" FORCE)
+  set(ENABLE_MPEG OFF CACHE BOOL "come on" FORCE)
+  add_subdirectory(extern/libsndfile EXCLUDE_FROM_ALL)
+  list(APPEND DEPENDENCIES_LIBRARIES sndfile)
+  message(STATUS "Using vendored libsndfile")
 endif()
 
 if (USE_RTMIDI)
@@ -213,76 +148,58 @@ else()
   message(STATUS "Using vendored zlib")
 endif()
 
-if (USE_SDL2)
-  if (SYSTEM_SDL2)
-    if (PKG_CONFIG_FOUND)
-      pkg_check_modules(SDL2 sdl2>=${SYSTEM_SDL_MIN_VER})
-      if (SDL2_FOUND)
-        list(APPEND DEPENDENCIES_DEFINES HAVE_SDL2)
-        list(APPEND DEPENDENCIES_INCLUDE_DIRS ${SDL2_INCLUDE_DIRS})
-        list(APPEND DEPENDENCIES_COMPILE_OPTIONS ${SDL2_CFLAGS_OTHER})
-        list(APPEND DEPENDENCIES_LIBRARIES ${SDL2_LIBRARIES})
-        list(APPEND DEPENDENCIES_LIBRARY_DIRS ${SDL2_LIBRARY_DIRS})
-        list(APPEND DEPENDENCIES_LINK_OPTIONS ${SDL2_LDFLAGS_OTHER})
-        list(APPEND DEPENDENCIES_LEGACY_LDFLAGS ${SDL2_LDFLAGS})
+if (SYSTEM_SDL2)
+  if (PKG_CONFIG_FOUND)
+    pkg_check_modules(SDL sdl>=${SYSTEM_SDL_MIN_VER})
+    if (SDL_FOUND)
+      list(APPEND DEPENDENCIES_INCLUDE_DIRS ${SDL_INCLUDE_DIRS})
+      list(APPEND DEPENDENCIES_COMPILE_OPTIONS ${SDL_CFLAGS_OTHER})
+      list(APPEND DEPENDENCIES_LIBRARIES ${SDL_LIBRARIES})
+      list(APPEND DEPENDENCIES_LIBRARY_DIRS ${SDL_LIBRARY_DIRS})
+      list(APPEND DEPENDENCIES_LINK_OPTIONS ${SDL_LDFLAGS_OTHER})
+      list(APPEND DEPENDENCIES_LEGACY_LDFLAGS ${SDL_LDFLAGS})
+    endif()
+  endif()
+  if (NOT SDL_FOUND)
+    find_package(SDL ${SYSTEM_SDL_MIN_VER})
+    if (SDL_FOUND)
+      list(APPEND DEPENDENCIES_INCLUDE_DIRS ${SDL_INCLUDE_DIR})
+      list(APPEND DEPENDENCIES_LIBRARIES ${SDL_LIBRARY})
+    else()
+      if (PKG_CONFIG_FOUND)
+        pkg_check_modules(SDL2 sdl2>=${SYSTEM_SDL_MIN_VER})
+        if (SDL2_FOUND)
+          list(APPEND DEPENDENCIES_INCLUDE_DIRS ${SDL2_INCLUDE_DIRS})
+          list(APPEND DEPENDENCIES_COMPILE_OPTIONS ${SDL2_CFLAGS_OTHER})
+          list(APPEND DEPENDENCIES_LIBRARIES ${SDL2_LIBRARIES})
+          list(APPEND DEPENDENCIES_LIBRARY_DIRS ${SDL2_LIBRARY_DIRS})
+          list(APPEND DEPENDENCIES_LINK_OPTIONS ${SDL2_LDFLAGS_OTHER})
+          list(APPEND DEPENDENCIES_LEGACY_LDFLAGS ${SDL2_LDFLAGS})
+        endif()
+      endif()
+      if (NOT SDL2_FOUND)
+        find_package(SDL2 ${SYSTEM_SDL_MIN_VER} REQUIRED)
+        list(APPEND DEPENDENCIES_INCLUDE_DIRS ${SDL2_INCLUDE_DIR})
+        list(APPEND DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY})
       endif()
     endif()
-    if (NOT SDL2_FOUND)
-      find_package(SDL2 ${SYSTEM_SDL_MIN_VER} REQUIRED)
-      list(APPEND DEPENDENCIES_DEFINES HAVE_SDL2)
-      list(APPEND DEPENDENCIES_INCLUDE_DIRS ${SDL2_INCLUDE_DIR})
-      list(APPEND DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY})
-    endif()
-    message(STATUS "Using system-installed SDL2")
-  else()
-    if (ANDROID AND NOT TERMUX)
-      set(SDL_SHARED ON CACHE BOOL "Force no dynamically-linked SDL" FORCE)
-      set(SDL_STATIC OFF CACHE BOOL "Force statically-linked SDL" FORCE)
-    else()
-      set(SDL_SHARED OFF CACHE BOOL "Force no dynamically-linked SDL" FORCE)
-      set(SDL_STATIC ON CACHE BOOL "Force statically-linked SDL" FORCE)
-    endif()
-    # https://github.com/libsdl-org/SDL/issues/5535
-    # disable PipeWire support due to an unfixable bug:
-    #   Looks like their headers have a C90 violation... I imagine they're probably on C99 so not the craziest bug in the world. Definitely file this at the PipeWire repository as well so they know this is out there.
-    set(SDL_PIPEWIRE OFF CACHE BOOL "Use Pipewire audio" FORCE)
-
-    # https://github.com/libsdl-org/SDL/issues/1481
-    # On 2014-06-22 17:15:50 +0000, Sam Lantinga wrote:
-    #   If you link SDL statically, you also need to define HAVE_LIBC so it builds with the C runtime that your application uses.
-    #   This should probably go in a FAQ.
-    set(SDL_LIBC ON CACHE BOOL "Tell SDL that we want it to use our C runtime (required for proper static linking)" FORCE)
-    add_subdirectory(extern/SDL EXCLUDE_FROM_ALL)
-    list(APPEND DEPENDENCIES_DEFINES HAVE_SDL2)
-    list(APPEND DEPENDENCIES_INCLUDE_DIRS extern/SDL/include)
-    if (ANDROID AND NOT TERMUX)
-      list(APPEND DEPENDENCIES_LIBRARIES SDL2)
-    else()
-      list(APPEND DEPENDENCIES_LIBRARIES SDL2-static)
-    endif()
-    # Work around add_subdirectory'd SDL not propagating HAVE_LIBC to MSVC furnace build
-    if (MSVC)
-      list(APPEND DEPENDENCIES_COMPILE_OPTIONS "/DHAVE_LIBC")
-    endif()
-    message(STATUS "Using vendored SDL2")
   endif()
+  message(STATUS "Using system-installed SDL2")
 else()
-  message(STATUS "Not using SDL2")
-  if (BUILD_GUI)
-    message(FATAL_ERROR "SDL2 is required in order to build with GUI! Disable BUILD_GUI otherwise.")
-  endif()
+  set(SDL_SHARED OFF)
+  set(SDL_STATIC ON)
+  add_subdirectory(extern/SDL EXCLUDE_FROM_ALL)
+  list(APPEND DEPENDENCIES_INCLUDE_DIRS extern/SDL/include)
+  list(APPEND DEPENDENCIES_LIBRARIES SDL2-static)
+  message(STATUS "Using vendored SDL2")
 endif()
 
 set(AUDIO_SOURCES
 src/audio/abstract.cpp
-src/audio/midi.cpp
+src/audio/sdl.cpp
 )
 
-if (USE_SDL2)
-  list(APPEND AUDIO_SOURCES src/audio/sdlAudio.cpp)
-endif()
-
-if (WITH_JACK)
+if(WITH_JACK)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(JACK REQUIRED jack)
   list(APPEND AUDIO_SOURCES src/audio/jack.cpp)
@@ -301,14 +218,12 @@ endif()
 if (USE_RTMIDI)
   list(APPEND AUDIO_SOURCES src/audio/rtmidi.cpp)
   message(STATUS "Building with RtMidi")
-  list(APPEND DEPENDENCIES_DEFINES HAVE_RTMIDI)
 else()
   message(STATUS "Building without RtMidi")
 endif()
 
 set(ENGINE_SOURCES
 src/log.cpp
-src/baseutils.cpp
 src/fileutils.cpp
 src/utfutils.cpp
 
@@ -321,61 +236,15 @@ extern/SAASound/src/SAANoise.cpp
 extern/SAASound/src/SAASndC.cpp
 extern/SAASound/src/SAASound.cpp
 
-extern/vgsound_emu-modified/vgsound_emu/src/core/vox/vox.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/es550x/es550x.cpp
-extern/vgsound_emu-modified/vgsound_emu/src/es550x/es550x_alu.cpp
-extern/vgsound_emu-modified/vgsound_emu/src/es550x/es550x_filter.cpp
-extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5504.cpp
-extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5505.cpp
-extern/vgsound_emu-modified/vgsound_emu/src/es550x/es5506.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/k005289/k005289.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/k007232/k007232.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/k053260/k053260.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/msm6295/msm6295.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/n163/n163.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/scc/scc.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/vrcvi/vrcvi.cpp
-
-extern/vgsound_emu-modified/vgsound_emu/src/x1_010/x1_010.cpp
-
-extern/adpcm/bs_codec.c
-extern/adpcm/oki_codec.c
-extern/adpcm/yma_codec.c
-extern/adpcm/ymb_codec.c
-extern/adpcm/ymz_codec.c
-
 extern/Nuked-OPN2/ym3438.c
-extern/Nuked-PSG/ympsg.c
 extern/opm/opm.c
-extern/Nuked-OPLL/opll.c
-extern/opl/opl3.c
 src/engine/platform/sound/sn76496.cpp
 src/engine/platform/sound/ay8910.cpp
 src/engine/platform/sound/saa1099.cpp
-src/engine/platform/sound/namco.cpp
 src/engine/platform/sound/gb/apu.c
 src/engine/platform/sound/gb/timing.c
 src/engine/platform/sound/pce_psg.cpp
 src/engine/platform/sound/nes/apu.c
-src/engine/platform/sound/nes/fds.c
-src/engine/platform/sound/nes/mmc5.c
-src/engine/platform/sound/vera_psg.c
-src/engine/platform/sound/vera_pcm.c
-
-src/engine/platform/sound/nes_nsfplay/nes_apu.cpp
-src/engine/platform/sound/nes_nsfplay/nes_dmc.cpp
-src/engine/platform/sound/nes_nsfplay/nes_fds.cpp
-src/engine/platform/sound/nes_nsfplay/nes_mmc5.cpp
-src/engine/platform/sound/nes_nsfplay/nes_n106.cpp
-src/engine/platform/sound/nes_nsfplay/nes_vrc6.cpp
 
 src/engine/platform/sound/c64/sid.cc
 src/engine/platform/sound/c64/voice.cc
@@ -395,26 +264,7 @@ src/engine/platform/sound/c64/wave8580_PST.cc
 src/engine/platform/sound/c64/wave8580_P_T.cc
 src/engine/platform/sound/c64/wave8580__ST.cc
 
-src/engine/platform/sound/c64_fp/Dac.cpp
-src/engine/platform/sound/c64_fp/EnvelopeGenerator.cpp
-src/engine/platform/sound/c64_fp/ExternalFilter.cpp
-src/engine/platform/sound/c64_fp/Filter6581.cpp
-src/engine/platform/sound/c64_fp/Filter8580.cpp
-src/engine/platform/sound/c64_fp/Filter.cpp
-src/engine/platform/sound/c64_fp/FilterModelConfig6581.cpp
-src/engine/platform/sound/c64_fp/FilterModelConfig8580.cpp
-src/engine/platform/sound/c64_fp/FilterModelConfig.cpp
-src/engine/platform/sound/c64_fp/Integrator6581.cpp
-src/engine/platform/sound/c64_fp/Integrator8580.cpp
-src/engine/platform/sound/c64_fp/OpAmp.cpp
-src/engine/platform/sound/c64_fp/SID.cpp
-src/engine/platform/sound/c64_fp/Spline.cpp
-src/engine/platform/sound/c64_fp/WaveformCalculator.cpp
-src/engine/platform/sound/c64_fp/WaveformGenerator.cpp
-src/engine/platform/sound/c64_fp/resample/SincResampler.cpp
-
-src/engine/platform/sound/tia/AudioChannel.cpp
-src/engine/platform/sound/tia/Audio.cpp
+src/engine/platform/sound/tia/TIASnd.cpp
 
 src/engine/platform/sound/ymfm/ymfm_adpcm.cpp
 src/engine/platform/sound/ymfm/ymfm_opm.cpp
@@ -422,44 +272,15 @@ src/engine/platform/sound/ymfm/ymfm_opn.cpp
 src/engine/platform/sound/ymfm/ymfm_opz.cpp
 src/engine/platform/sound/ymfm/ymfm_ssg.cpp
 
-src/engine/platform/sound/lynx/Mikey.cpp
-
-src/engine/platform/sound/qsound.c
-
-src/engine/platform/sound/swan.cpp
-
-src/engine/platform/sound/su.cpp
-
-src/engine/platform/sound/vic20sound.c
-
-src/engine/platform/sound/ymz280b.cpp
-
-src/engine/platform/sound/vsu.cpp
-
-src/engine/platform/sound/t6w28/T6W28_Apu.cpp
-
-src/engine/platform/sound/rf5c68.cpp
-
-src/engine/platform/sound/oki/msm5232.cpp
-src/engine/platform/sound/oki/okim6258.cpp
-
-src/engine/platform/sound/snes/SPC_DSP.cpp
-
-src/engine/platform/oplAInterface.cpp
-src/engine/platform/ym2608Interface.cpp
 src/engine/platform/ym2610Interface.cpp
 
 src/engine/blip_buf.c
-src/engine/brrUtils.c
 src/engine/safeReader.cpp
 src/engine/safeWriter.cpp
 src/engine/config.cpp
-src/engine/configEngine.cpp
 src/engine/dispatchContainer.cpp
 src/engine/engine.cpp
 src/engine/fileOps.cpp
-src/engine/fileOpsIns.cpp
-src/engine/filter.cpp
 src/engine/instrument.cpp
 src/engine/macroInt.cpp
 src/engine/pattern.cpp
@@ -468,69 +289,25 @@ src/engine/sample.cpp
 src/engine/song.cpp
 src/engine/sysDef.cpp
 src/engine/wavetable.cpp
-src/engine/waveSynth.cpp
 src/engine/vgmOps.cpp
-src/engine/zsmOps.cpp
-src/engine/zsm.cpp
 src/engine/platform/abstract.cpp
 src/engine/platform/genesis.cpp
 src/engine/platform/genesisext.cpp
 src/engine/platform/sms.cpp
-src/engine/platform/opll.cpp
 src/engine/platform/gb.cpp
 src/engine/platform/pce.cpp
-src/engine/platform/mmc5.cpp
 src/engine/platform/nes.cpp
 src/engine/platform/c64.cpp
 src/engine/platform/arcade.cpp
-src/engine/platform/tx81z.cpp
-src/engine/platform/ym2203.cpp
-src/engine/platform/ym2203ext.cpp
-src/engine/platform/ym2608.cpp
-src/engine/platform/ym2608ext.cpp
 src/engine/platform/ym2610.cpp
 src/engine/platform/ym2610ext.cpp
-src/engine/platform/ym2610b.cpp
-src/engine/platform/ym2610bext.cpp
 src/engine/platform/ay.cpp
 src/engine/platform/ay8930.cpp
-src/engine/platform/opl.cpp
-src/engine/platform/fds.cpp
 src/engine/platform/tia.cpp
 src/engine/platform/saa.cpp
 src/engine/platform/amiga.cpp
-src/engine/platform/msm5232.cpp
-src/engine/platform/msm6258.cpp
-src/engine/platform/msm6295.cpp
-src/engine/platform/pcspkr.cpp
-src/engine/platform/segapcm.cpp
-src/engine/platform/qsound.cpp
-src/engine/platform/x1_010.cpp
-src/engine/platform/lynx.cpp
-src/engine/platform/su.cpp
-src/engine/platform/swan.cpp
-src/engine/platform/t6w28.cpp
-src/engine/platform/vb.cpp
-src/engine/platform/vera.cpp
-src/engine/platform/zxbeeper.cpp
-src/engine/platform/bubsyswsg.cpp
-src/engine/platform/n163.cpp
-src/engine/platform/pet.cpp
-src/engine/platform/pong.cpp
-src/engine/platform/vic20.cpp
-src/engine/platform/vrc6.cpp
-src/engine/platform/scc.cpp
-src/engine/platform/ymz280b.cpp
-src/engine/platform/namcowsg.cpp
-src/engine/platform/rf5c68.cpp
-src/engine/platform/snes.cpp
-src/engine/platform/pcmdac.cpp
 src/engine/platform/dummy.cpp
 )
-
-if (USE_SNDFILE)
-  list(APPEND ENGINE_SOURCES src/engine/sfWrapper.cpp)
-endif()
 
 if (WIN32)
   list(APPEND ENGINE_SOURCES src/utfutils.cpp)
@@ -538,18 +315,14 @@ if (WIN32)
   list(APPEND ENGINE_SOURCES res/furnace.rc)
 endif()
 
-set(CLI_SOURCES
-src/cli/cli.cpp
-)
-
 set(GUI_SOURCES
-extern/imgui_patched/imgui.cpp
-extern/imgui_patched/imgui_draw.cpp
-extern/imgui_patched/imgui_tables.cpp
-extern/imgui_patched/imgui_widgets.cpp
-extern/imgui_patched/backends/imgui_impl_sdlrenderer.cpp
-extern/imgui_patched/backends/imgui_impl_sdl.cpp
-extern/imgui_patched/misc/cpp/imgui_stdlib.cpp
+extern/imgui/imgui.cpp
+extern/imgui/imgui_draw.cpp
+extern/imgui/imgui_tables.cpp
+extern/imgui/imgui_widgets.cpp
+extern/imgui_patched/imgui_impl_sdlrenderer.cpp
+extern/imgui_patched/imgui_impl_sdl.cpp
+extern/imgui/misc/cpp/imgui_stdlib.cpp
 extern/igfd/ImGuiFileDialog.cpp
 
 src/gui/plot_nolerp.cpp
@@ -564,130 +337,37 @@ src/gui/font_unifont.cpp
 src/gui/font_icon.cpp
 src/gui/fonts.cpp
 src/gui/debug.cpp
-src/gui/fileDialog.cpp
 
 src/gui/intConst.cpp
 src/gui/guiConst.cpp
 
-src/gui/about.cpp
-src/gui/channels.cpp
-src/gui/chanOsc.cpp
-src/gui/clock.cpp
-src/gui/compatFlags.cpp
-src/gui/cursor.cpp
-src/gui/dataList.cpp
-src/gui/debugWindow.cpp
-src/gui/doAction.cpp
-src/gui/editing.cpp
-src/gui/editControls.cpp
-src/gui/effectList.cpp
-src/gui/findReplace.cpp
-src/gui/gradient.cpp
 src/gui/insEdit.cpp
-src/gui/log.cpp
-src/gui/mixer.cpp
-src/gui/midiMap.cpp
-src/gui/newSong.cpp
 src/gui/orders.cpp
-src/gui/osc.cpp
-src/gui/patManager.cpp
 src/gui/pattern.cpp
-src/gui/piano.cpp
-src/gui/presets.cpp
-src/gui/regView.cpp
-src/gui/sampleEdit.cpp
-src/gui/scaling.cpp
 src/gui/settings.cpp
-src/gui/songInfo.cpp
-src/gui/songNotes.cpp
-src/gui/spoiler.cpp
-src/gui/stats.cpp
-src/gui/subSongs.cpp
-src/gui/sysConf.cpp
-src/gui/sysEx.cpp
-src/gui/sysManager.cpp
-src/gui/sysPicker.cpp
 src/gui/util.cpp
-src/gui/waveEdit.cpp
-src/gui/volMeter.cpp
 src/gui/gui.cpp
 )
 
-if (WIN32 OR APPLE)
-  list(APPEND GUI_SOURCES extern/nfd-modified/src/nfd_common.cpp)
-endif()
-
-if (WIN32)
-  list(APPEND GUI_SOURCES extern/nfd-modified/src/nfd_win.cpp)
-endif()
-
 if (APPLE)
   list(APPEND GUI_SOURCES src/gui/macstuff.m)
-  list(APPEND GUI_SOURCES extern/nfd-modified/src/nfd_cocoa.mm)
 endif()
 
 if (NOT WIN32 AND NOT APPLE)
   list(APPEND GUI_SOURCES src/gui/icon.c)
-
-  CHECK_INCLUDE_FILE(sys/io.h SYS_IO_FOUND)
-  CHECK_INCLUDE_FILE(linux/input.h LINUX_INPUT_FOUND)
-  CHECK_INCLUDE_FILE(linux/kd.h LINUX_KD_FOUND)
-  if (SYS_IO_FOUND)
-    try_compile(HAVE_INOUTB ${CMAKE_BINARY_DIR}/check SOURCES ${CMAKE_SOURCE_DIR}/src/check/check_sysIO.c)
-    if (HAVE_INOUTB)
-      list(APPEND DEPENDENCIES_DEFINES HAVE_SYS_IO)
-      message(STATUS "PC speaker output: outb()")
-    else()
-      message(STATUS "sys/io.h found but inb()/outb() not present")
-    endif()
-  endif()
-  if (LINUX_INPUT_FOUND)
-    list(APPEND DEPENDENCIES_DEFINES HAVE_LINUX_INPUT)
-    message(STATUS "PC speaker output: evdev")
-  endif()
-  if (LINUX_KD_FOUND)
-    list(APPEND DEPENDENCIES_DEFINES HAVE_LINUX_KD)
-    message(STATUS "PC speaker output: KIOCSOUND")
-  endif()
 endif()
 
-if (NOT WIN32)
-  try_compile(HAVE_DIRENT_TYPE ${CMAKE_BINARY_DIR}/check SOURCES ${CMAKE_SOURCE_DIR}/src/check/check_dirent_type.c)
-  if (HAVE_DIRENT_TYPE)
-    list(APPEND DEPENDENCIES_DEFINES HAVE_DIRENT_TYPE)
-  endif()
-endif()
-
-set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} ${CLI_SOURCES} src/main.cpp)
-
-if (USE_BACKWARD)
-  list(APPEND USED_SOURCES src/backtrace.cpp)
-  if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    list(APPEND DEPENDENCIES_LIBRARIES dbghelp psapi)
-  endif()
-  find_library(EXECINFO_IS_LIBRARY execinfo)
-  if (EXECINFO_IS_LIBRARY)
-    list(APPEND DEPENDENCIES_LIBRARIES execinfo)
-  endif()
-  message(STATUS "Using backward-cpp")
-else()
-  message(STATUS "Not using backward-cpp")
-endif()
+set(USED_SOURCES ${ENGINE_SOURCES} ${AUDIO_SOURCES} src/main.cpp)
 
 if (BUILD_GUI)
   list(APPEND USED_SOURCES ${GUI_SOURCES})
   list(APPEND DEPENDENCIES_INCLUDE_DIRS
-    extern/imgui_patched
+    extern/imgui
     extern/imgui_conf
-    extern/imgui_patched/backends
+    extern/imgui/backends
     extern/IconFontCppHeaders
     extern/igfd
   )
-  if (WIN32 OR APPLE)
-    list(APPEND DEPENDENCIES_INCLUDE_DIRS
-      extern/nfd-modified/src/include
-    )
-  endif()
   list(APPEND DEPENDENCIES_DEFINES HAVE_GUI)
   message(STATUS "Building GUI")
 else()
@@ -699,33 +379,22 @@ if (WIN32)
   if (NOT MSVC)
     list(APPEND DEPENDENCIES_LIBRARIES -static)
   endif()
-elseif (APPLE)
+endif()
+
+if (APPLE)
   find_library(COCOA Cocoa REQUIRED)
   list(APPEND DEPENDENCIES_LIBRARIES ${COCOA})
-else()
-  list(APPEND DEPENDENCIES_LIBRARIES dl)
 endif()
 
 if (NOT MSVC)
   set(WARNING_FLAGS -Wall -Wextra -Wno-unused-parameter)
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.0.0)
-      # nothing
-    else()
-      list(APPEND WARNING_FLAGS -Wno-cast-function-type)
-    endif()
-  endif()
   if (WARNINGS_ARE_ERRORS)
     list(APPEND WARNING_FLAGS -Werror)
   endif()
 else()
-  add_compile_options("/utf-8")
-  set(WARNING_FLAGS /W2 /D_CRT_SECURE_NO_WARNINGS)
-  list(APPEND WARNING_FLAGS
-    /wd4244 # implicit type conversions
-    /wd4305 # truncations
-    /wd4309 # truncations of constant values
-  )
+  # /wd4100 == -Wno-unused-parameter
+  add_compile_options("/source-charset:utf-8")
+  set(WARNING_FLAGS /W4 /wd4100 /D_CRT_SECURE_NO_WARNINGS)
   if (WARNINGS_ARE_ERRORS)
     list(APPEND WARNING_FLAGS /WX)
   endif()
@@ -743,8 +412,6 @@ endif()
 
 if (MSVC)
   add_executable(furnace WIN32 ${USED_SOURCES})
-elseif(ANDROID AND NOT TERMUX)
-  add_library(furnace SHARED ${USED_SOURCES})
 else()
   add_executable(furnace ${USED_SOURCES})
 endif()
@@ -766,44 +433,31 @@ if (PKG_CONFIG_FOUND AND (SYSTEM_FMT OR SYSTEM_LIBSNDFILE OR SYSTEM_ZLIB OR SYST
   endif()
 endif()
 
-if (NOT ANDROID OR TERMUX)
-  if (NOT WIN32 AND NOT APPLE)
-    include(GNUInstallDirs)
-    install(TARGETS furnace RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(FILES res/furnace.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-    install(FILES res/furnace.appdata.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
-    install(DIRECTORY papers DESTINATION ${CMAKE_INSTALL_DOCDIR})
-    install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/furnace)
-    if (WITH_DEMOS)
-      install(DIRECTORY demos DESTINATION ${CMAKE_INSTALL_DATADIR}/furnace)
-    endif()
-    if (WITH_INSTRUMENTS)
-      install(DIRECTORY instruments DESTINATION ${CMAKE_INSTALL_DATADIR}/furnace)
-    endif()
-    foreach(num 16 32 64 128 256 512)
-      set(res ${num}x${num})
-      install(FILES res/icon.iconset/icon_${res}.png RENAME furnace.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${res}/apps)
-      install(FILES res/icon.iconset/icon_${res}@2x.png RENAME furnace.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${res}@2/apps)
-    endforeach()
-    install(FILES res/logo.png RENAME furnace.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/1024x1024/apps)
-  else()
-    install(TARGETS furnace RUNTIME DESTINATION bin)
-  endif()
+install(TARGETS furnace RUNTIME DESTINATION bin)
 
-  set(CPACK_PACKAGE_NAME "Furnace")
-  set(CPACK_PACKAGE_VENDOR "tildearrow")
-  set(CPACK_PACKAGE_DESCRIPTION "free and open-source chiptune tracker")
-  
-  if (APPLE)
-    set(CPACK_GENERATOR Bundle)
-    set(CPACK_DMG_SLA_DIR ${CMAKE_SOURCE_DIR}/res/macLicense)
-    set(CPACK_DMG_SLA_LANGUAGES en)
-    set(CPACK_BUNDLE_NAME "Furnace")
-    set(CPACK_DMG_VOLUME_NAME "Furnace")
-    set(CPACK_BUNDLE_PLIST ${CMAKE_SOURCE_DIR}/res/Info.plist)
-    set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/res/icon.icns)
-    set(CPACK_BUNDLE_STARTUP_COMMAND "furnace")
-  endif()
-  
-  include(CPack)
+if (NOT WIN32 AND NOT APPLE)
+  include(GNUInstallDirs)
+  install(FILES res/furnace.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+  install(FILES res/furnace.appdata.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+  install(DIRECTORY papers DESTINATION ${CMAKE_INSTALL_DOCDIR})
+  install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/furnace)
+  install(DIRECTORY demos DESTINATION ${CMAKE_INSTALL_DATADIR}/furnace)
+  install(FILES res/logo.png RENAME furnace.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/1024x1024/apps)
 endif()
+
+set(CPACK_PACKAGE_NAME "Furnace")
+set(CPACK_PACKAGE_VENDOR "tildearrow")
+set(CPACK_PACKAGE_DESCRIPTION "free and open-source chiptune tracker")
+
+if (APPLE)
+  set(CPACK_GENERATOR Bundle)
+  set(CPACK_DMG_SLA_DIR ${CMAKE_SOURCE_DIR}/res/macLicense)
+  set(CPACK_DMG_SLA_LANGUAGES en)
+  set(CPACK_BUNDLE_NAME "Furnace")
+  set(CPACK_DMG_VOLUME_NAME "Furnace")
+  set(CPACK_BUNDLE_PLIST ${CMAKE_SOURCE_DIR}/res/Info.plist)
+  set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/res/icon.icns)
+  set(CPACK_BUNDLE_STARTUP_COMMAND "furnace")
+endif()
+
+include(CPack)
