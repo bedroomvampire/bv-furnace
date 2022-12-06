@@ -25,13 +25,21 @@
 class DivEngine;
 
 struct DivMacroStruct {
+<<<<<<< HEAD
   int pos, lastPos, lfoPos, delay;
+=======
+  int pos;
+>>>>>>> parent of f01be34b (GUI: highlight current macro position)
   int val;
   bool has, had, actualHad, finished, will, linger, began;
   unsigned int mode, type;
   void doMacro(DivInstrumentMacro& source, bool released, bool tick);
   void init() {
+<<<<<<< HEAD
     pos=lastPos=lfoPos=mode=type=delay=0;
+=======
+    pos=mode=0;
+>>>>>>> parent of f01be34b (GUI: highlight current macro position)
     has=had=actualHad=will=false;
     linger=false;
     began=true;
@@ -132,13 +140,6 @@ class DivMacroInt {
      * @param which the instrument in question.
      */
     void notifyInsDeletion(DivInstrument* which);
-
-    /**
-     * get DivMacroStruct by macro name.
-     * @param which the macro name.
-     * @return a DivMacroStruct, or NULL if none found.
-     */
-    DivMacroStruct* structByName(const String& name);
 
     DivMacroInt():
       e(NULL),

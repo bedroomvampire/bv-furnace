@@ -19,7 +19,6 @@
 
 #include "gui.h"
 #include "imgui_internal.h"
-#include "../engine/macroInt.h"
 #include "IconsFontAwesome4.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include "guiConst.h"
@@ -1258,10 +1257,18 @@ String genericGuide(float value) {
   return fmt::sprintf("%d",(int)value);
 }
 
+<<<<<<< HEAD
 inline int deBit30(const int val) {
   if ((val&0xc0000000)==0x40000000 || (val&0xc0000000)==0x80000000) return val^0x40000000;
   return val;
 }
+=======
+void FurnaceGUI::drawMacros(std::vector<FurnaceGUIMacroDesc>& macros) {
+  float asFloat[256];
+  int asInt[256];
+  float loopIndicator[256];
+  int index=0;
+>>>>>>> parent of f01be34b (GUI: highlight current macro position)
 
 inline bool enBit30(const int val) {
   if ((val&0xc0000000)==0x40000000 || (val&0xc0000000)==0x80000000) return true;
@@ -1315,6 +1322,7 @@ void FurnaceGUI::drawMacroEdit(FurnaceGUIMacroDesc& i, int totalFit, float avail
   static float bit30Indicator[256];
   static bool doHighlight[256];
 
+<<<<<<< HEAD
   if ((i.macro->open&6)==0) {
     for (int j=0; j<256; j++) {
       bit30Indicator[j]=0;
@@ -1325,6 +1333,70 @@ void FurnaceGUI::drawMacroEdit(FurnaceGUIMacroDesc& i, int totalFit, float avail
         asFloat[j]=deBit30(i.macro->val[j+macroDragScroll]);
         asInt[j]=deBit30(i.macro->val[j+macroDragScroll])+i.bitOffset;
         if (i.bit30) bit30Indicator[j]=enBit30(i.macro->val[j+macroDragScroll]);
+=======
+      // description
+      ImGui::TableNextColumn();
+      ImGui::Text("%s",i.displayName);
+      ImGui::SameLine();
+      if (ImGui::SmallButton(i.macro->open?(ICON_FA_CHEVRON_UP "##IMacroOpen"):(ICON_FA_CHEVRON_DOWN "##IMacroOpen"))) {
+        i.macro->open=!i.macro->open;
+      }
+      if (i.macro->open) {
+        ImGui::SetNextItemWidth(lenAvail);
+        if (ImGui::InputScalar("##IMacroLen",ImGuiDataType_U8,&i.macro->len,&_ONE,&_THREE)) { MARK_MODIFIED
+          if (i.macro->len>128) i.macro->len=128;
+        }
+        // do not change this!
+        // anything other than a checkbox will look ugly!
+        // if you really need more than two macro modes please tell me.
+        if (i.modeName!=NULL) {
+          bool modeVal=i.macro->mode;
+          String modeName=fmt::sprintf("%s##IMacroMode",i.modeName);
+          if (ImGui::Checkbox(modeName.c_str(),&modeVal)) {
+            i.macro->mode=modeVal;
+          }
+        }
+      }
+
+      // macro area
+      ImGui::TableNextColumn();
+      for (int j=0; j<256; j++) {
+        if (j+macroDragScroll>=i.macro->len) {
+          asFloat[j]=0;
+          asInt[j]=0;
+        } else {
+          asFloat[j]=i.macro->val[j+macroDragScroll];
+          asInt[j]=i.macro->val[j+macroDragScroll]+i.bitOffset;
+        }
+        if (j+macroDragScroll>=i.macro->len || (j+macroDragScroll>i.macro->rel && i.macro->loop<i.macro->rel)) {
+          loopIndicator[j]=0;
+        } else {
+          loopIndicator[j]=((i.macro->loop!=-1 && (j+macroDragScroll)>=i.macro->loop))|((i.macro->rel!=-1 && (j+macroDragScroll)==i.macro->rel)<<1);
+        }
+      }
+      ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,ImVec2(0.0f,0.0f));
+
+      if (i.macro->vZoom<1) {
+        if (i.macro->name=="arp") {
+          i.macro->vZoom=24;
+          i.macro->vScroll=120-12;
+        } else if (i.macro->name=="pitch") {
+          i.macro->vZoom=128;
+          i.macro->vScroll=2048-64;
+        } else {
+          i.macro->vZoom=i.max-i.min;
+          i.macro->vScroll=0;
+        }
+      }
+      if (i.macro->vZoom>(i.max-i.min)) {
+        i.macro->vZoom=i.max-i.min;
+      }
+           
+      if (i.isBitfield) {
+        PlotBitfield("##IMacro",asInt,totalFit,0,i.bitfieldBits,i.max,ImVec2(availableWidth,(i.macro->open)?(i.height*dpiScale):(32.0f*dpiScale)));
+      } else {
+        PlotCustom("##IMacro",asFloat,totalFit,macroDragScroll,NULL,i.min+i.macro->vScroll,i.min+i.macro->vScroll+i.macro->vZoom,ImVec2(availableWidth,(i.macro->open)?(i.height*dpiScale):(32.0f*dpiScale)),sizeof(float),i.color,i.macro->len-macroDragScroll,i.hoverFunc,i.blockMode,i.macro->open?genericGuide:NULL);
+>>>>>>> parent of f01be34b (GUI: highlight current macro position)
       }
       if (j+macroDragScroll>=i.macro->len || (j+macroDragScroll>i.macro->rel && i.macro->loop<i.macro->rel)) {
         loopIndicator[j]=0;
